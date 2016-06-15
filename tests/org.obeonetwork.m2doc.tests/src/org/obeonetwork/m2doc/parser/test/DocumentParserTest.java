@@ -17,16 +17,26 @@ import java.io.IOException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.eclipse.acceleo.query.ast.Call;
+import org.eclipse.acceleo.query.ast.Conditional;
+import org.eclipse.acceleo.query.ast.StringLiteral;
+import org.eclipse.acceleo.query.ast.impl.CallImpl;
+import org.eclipse.acceleo.query.runtime.IQueryBuilderEngine.AstResult;
 import org.eclipse.acceleo.query.runtime.IQueryEnvironment;
+import org.eclipse.emf.common.util.EMap;
 import org.junit.Test;
 import org.obeonetwork.m2doc.parser.BodyParser;
 import org.obeonetwork.m2doc.parser.DocumentParserException;
+import org.obeonetwork.m2doc.provider.test.StubDiagramProvider;
+import org.obeonetwork.m2doc.sirius.SiriusDiagramByRepresentationAndEObjectProvider;
+import org.obeonetwork.m2doc.sirius.SiriusDiagramByTitleProvider;
 import org.obeonetwork.m2doc.template.Conditionnal;
 import org.obeonetwork.m2doc.template.Default;
 import org.obeonetwork.m2doc.template.Image;
 import org.obeonetwork.m2doc.template.POSITION;
 import org.obeonetwork.m2doc.template.Query;
 import org.obeonetwork.m2doc.template.Repetition;
+import org.obeonetwork.m2doc.template.Representation;
 import org.obeonetwork.m2doc.template.Row;
 import org.obeonetwork.m2doc.template.StaticFragment;
 import org.obeonetwork.m2doc.template.Table;
@@ -292,6 +302,177 @@ public class DocumentParserTest {
         assertEquals(POSITION.BELOW, im.getLegendPOS());
     }
 
+    /**
+     * Tests that the escaping character {@link BodyParser#M2DOC_ESCAPE_CHARACTER} does escape the value delimiter character
+     * {@link BodyParser#VALUE_DELIMITER_CHARACTER}.
+     * The legend option is legend:"\"plan de forme\" du dingy herbulot\"" .
+     * The result value option should be <"plan de forme" du dingy herbulot">
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionEscaping() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionEscaping.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("images/dh1.gif", im.getFileName());
+        assertEquals(100, im.getHeight());
+        assertEquals(100, im.getWidth());
+        assertEquals("\"plan de forme\" du dingy herbulot\"", im.getLegend());
+        assertEquals(POSITION.BELOW, im.getLegendPOS());
+    }
+
+    /**
+     * Tests that the escaping character {@link BodyParser#M2DOC_ESCAPE_CHARACTER} is not kept when applied to a character that does not
+     * need to be escaped.
+     * The legend option is legend:"plan de for\me du dingy herbulot" .
+     * The result value option should be <"plan de forme du dingy herbulot">
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionEscaping2() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionEscaping2.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("images/dh1.gif", im.getFileName());
+        assertEquals(100, im.getHeight());
+        assertEquals(100, im.getWidth());
+        assertEquals("plan de forme du dingy herbulot", im.getLegend());
+        assertEquals(POSITION.BELOW, im.getLegendPOS());
+    }
+
+    /**
+     * Tests that the escaping character {@link BodyParser#M2DOC_ESCAPE_CHARACTER} when escaped is producing the escape character.
+     * The option is <legend:"\\plan de for\\me du di\\\"ngy herbulot\\" legendPos:"below">
+     * The result should be <\plan de for\me du di\"ngy herbulot\>
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionEscaping3() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionEscaping3.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("images/dh1.gif", im.getFileName());
+        assertEquals(100, im.getHeight());
+        assertEquals(100, im.getWidth());
+        assertEquals("\\plan de for\\me du di\\\"ngy herbulot\\", im.getLegend());
+        assertEquals(POSITION.BELOW, im.getLegendPOS());
+    }
+
+    /**
+     * Tests that a parsing error is provided when the delimiter character is not escaped in an option's value.
+     * The tag is <m:image file:"images/dh1.gif" height:"100" width:"100" legend:"plan de forme" du dingy herbulot" legendPos:"below" >.
+     * The result must have an error message indicated that an invalid character is present at index afet the u of "du".
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionInvalid() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionNoEscaping.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals(
+                "A forbidden character is present at the index 2 of the key definition 'du dingy herbulot\" legendPos'.",
+                im.getParsingErrors().get(0).getMessage());
+    }
+
+    /**
+     * Tests that a parsing error is present when the delimiter character is not escaped in an option's value.
+     * The tag is <m:image file:"images/dh1.gif" height:"100" width:"100" legen d:"plan de forme du dingy herbulot" legendPos:"below" >.
+     * The result must have an error message indicated that an unknow character is present at the key description "leg end".
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionInvalid2() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionInvalidKey.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("A forbidden character is present at the index 5 of the key definition 'legen d'.",
+                im.getParsingErrors().get(0).getMessage());
+    }
+
+    /**
+     * Tests that a parsing error is provided when the delimiter character is not escaped in an option's value.
+     * The tag is {m:image file:"images/dh1.gif" height:"100" width:"100" legend:"plan de forme du dingy herbulot" legendPos}.
+     * The result must have an error message indicated that an unknown character is present at the key description "leg end".
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionInvalid3() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionInvalidNotComplete.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("Invalid image option ( legendPos): unknown option name.",
+                im.getParsingErrors().get(0).getMessage());
+    }
+
+    /**
+     * Tests that insignificant spaces between key/value separator {@link BodyParser#KEY_VALUE_SEPARATOR} and value/key are handled
+     * correctly.
+     * The tag is {m:image file:"images/dh1.gif" height:"100" width:"100" legend : "plan de forme du dingy herbulot" legendPos:"below" } .
+     * All options should be handled correctly.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testStringOptionAuthorizedEmptySpace()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/testStringOptionEmptySpaces.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Image im = (Image) template.getSubConstructs().get(0);
+        assertEquals("images/dh1.gif", im.getFileName());
+        assertEquals(100, im.getHeight());
+        assertEquals(100, im.getWidth());
+        assertEquals("plan de forme du dingy herbulot", im.getLegend());
+        assertEquals(POSITION.BELOW, im.getLegendPOS());
+    }
+
     @Test
     public void imageParsingTestWithoutFiledirective()
             throws IOException, InvalidFormatException, DocumentParserException {
@@ -316,6 +497,241 @@ public class DocumentParserTest {
         assertEquals(1, template.getSubConstructs().size());
         Image im = (Image) template.getSubConstructs().get(0);
         assertEquals("Invalid image option (leg): unknown option name.", im.getParsingErrors().get(0).getMessage());
+    }
+
+    /**
+     * Tests that parsing a valid diagram tag with a {@link StubDiagramProvider} provided the right template element.
+     * The tested tag is {m:diagram provider:" org.obeonetwork.m2doc.provider.test.StubDiagramProvider" width:"200" height:"200"
+     * resultKind:"oneImage" legend:"plan de forme du dingy herbulot" legendPos:"below"}.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testRepresentationParsingWithProviderProducingOneImageOk()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramValidOneImage.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(1, representation.getOptionValueMap().size());
+        assertEquals("oneImage", optionValueMap.get("resultKind"));
+    }
+
+    /**
+     * Tests that parsing a valid diagram tag with a {@link StubDiagramProvider} provided the right template element when some
+     * spaces are around the provider.
+     * The tested tag is {m:diagram diagramProvider:' org.obeonetwork.m2doc.provider.test.StubDiagramProvider ' width:'200' height:'200'
+     * title:'RF Schema' legend:'plan de forme du dingy herbulot' legendPos:'below'}.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testRepresentationParsingWithProviderSurroundedBySpaces()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramValidSpacesAroundProvider.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(1, representation.getOptionValueMap().size());
+        assertEquals("oneImage", optionValueMap.get("resultKind"));
+    }
+
+    /**
+     * Tests that parsing a valid diagram tag with an AQL option containing the escaped character " will be handled correctly.
+     * The tested root object option is <aqlExpression:"if ('test\"'.size()=5)) then db endif">
+     * If handled correctly, the if condition will contains the double quote character.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException²
+     */
+    @SuppressWarnings("restriction")
+    @Test
+    public void testAQLParsingOptionOk() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramValidEscaping.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(1, representation.getOptionValueMap().size());
+        assertNotNull(optionValueMap.get("aqlExpression"));
+        AstResult result = (AstResult) optionValueMap.get("aqlExpression");
+        org.eclipse.acceleo.query.ast.Conditional conditional = (Conditional) result.getAst();
+
+        Call call = (CallImpl) conditional.getPredicate();
+        Call subCall = (Call) call.getArguments().get(0);
+        StringLiteral stringLiteral = (StringLiteral) subCall.getArguments().get(0);
+        assertEquals("test\"", stringLiteral.getValue());
+    }
+
+    /**
+     * Tests parsing of a valid diagram tag with an AQL option containing a string that contains a simple quote that must be escaped for
+     * AQL. With the M2Doc escape, the simple quote must be precede by two backslashes.
+     * The tested root object option is <aqlExpression:"if ('test\\''.size()=5)) then db endif" >
+     * If handled correctly, the if condition will contains one backslash character followed by the simple quote.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException²
+     */
+    @SuppressWarnings("restriction")
+    @Test
+    public void testAQLParsingOptionOk2() throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramValidEscaping2.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(1, representation.getOptionValueMap().size());
+        assertNotNull(optionValueMap.get("aqlExpression"));
+        AstResult result = (AstResult) optionValueMap.get("aqlExpression");
+        org.eclipse.acceleo.query.ast.Conditional conditional = (Conditional) result.getAst();
+
+        Call call = (CallImpl) conditional.getPredicate();
+        Call subCall = (Call) call.getArguments().get(0);
+        StringLiteral stringLiteral = (StringLiteral) subCall.getArguments().get(0);
+        assertEquals("test\'", stringLiteral.getValue());
+    }
+
+    /**
+     * Tests that parsing a diagram tag with no provider provided the right template element.
+     * The tested tag is {m:diagram diagramProvider:'wrong' width:'200' height:'200'
+     * title:'RF Schema'}.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testRepresentationParsingWithNoProviderKo()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramInvalidNoProvider.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertNull(representation.getProvider());
+        assertEquals(0, representation.getHeight());
+        assertEquals(0, representation.getWidth());
+        assertNull(representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(0, optionValueMap.size());
+        assertEquals(1, representation.getParsingErrors().size());
+        assertEquals("The image tag is referencing an unknown diagram provider : 'wrong'",
+                representation.getParsingErrors().get(0).getMessage());
+    }
+
+    /**
+     * Tests parsing of a diagram tag with the {@link SiriusDiagramByTitleProvider}. "title" option is missing.
+     * The tested tag is {m:diagram diagramProvider:'org.obeonetwork.m2doc.sirius.SiriusDiagramByTitleProvider' width:'200' height:'200'
+     * title:'RF Schema'}.
+     * Provider options are handled by template processor so no error should be added.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException
+     */
+    @Test
+    public void testRepresentationParsingWithValidProviderButNoOptions()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramNoProviderOptions.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        EMap<String, Object> optionValueMap = representation.getOptionValueMap();
+        assertEquals(0, optionValueMap.size());
+        assertEquals(0, representation.getParsingErrors().size());
+    }
+
+    /**
+     * Tests that parsing a diagram tag with a {@link SiriusDiagramByRepresentationAndEObjectProvider} and an invalid AQL expression
+     * provides the right template element.
+     * The tested tag is {m:diagram provider:" org.obeonetwork.m2doc.provider.test.StubDiagramProvider " width:"200" height:"200"
+     * aqlExpression:"wrong.->" legend:"plan de forme du dingy herbulot" legendPos:"below"}.
+     * 
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws DocumentParserException²
+     */
+    @Test
+    public void testRepresentationParsingInvalidAqlExpressionOk()
+            throws IOException, InvalidFormatException, DocumentParserException {
+        FileInputStream is = new FileInputStream("templates/diagramInvalidAqlExpression.docx");
+        OPCPackage oPackage = OPCPackage.open(is);
+        XWPFDocument document = new XWPFDocument(oPackage);
+        BodyParser parser = new BodyParser(document, env);
+        Template template = parser.parseTemplate();
+        assertEquals(1, template.getSubConstructs().size());
+        Representation representation = (Representation) template.getSubConstructs().get(0);
+        assertTrue(representation.getProvider() instanceof StubDiagramProvider);
+        // CHECKSTYLE:OFF
+        assertEquals(200, representation.getHeight());
+        assertEquals(200, representation.getWidth());
+        // CHECKSTYLE:ON
+        assertEquals("plan de forme du dingy herbulot", representation.getLegend());
+        assertEquals(POSITION.BELOW, representation.getLegendPOS());
+        assertEquals(1, representation.getOptionValueMap().size());
+        assertEquals(1, representation.getParsingErrors().size());
+        assertEquals("Expression wrong.-> is invalid", representation.getParsingErrors().get(0).getMessage());
     }
 
 }

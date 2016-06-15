@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+ <extension
+         point="org.eclipse.sirius.componentization">
+      <component
+            class="org.obeonetwork.m2doc.sirius.tests.M2DocSiriusTestPlugin"
+            id="org.obeonetwork.m2doc.tests.genconf"
+            name="GenConf design">
+      </component>
+   </extension>
+</plugin>
