@@ -384,7 +384,8 @@ public final class M2DocUtils {
         services = ServiceUtils.getServices(queryEnvironment, new ExcelServices(uriConverter, templateURI));
         ServiceUtils.registerServices(queryEnvironment, services);
         for (IServicesConfigurator configurator : getConfigurators()) {
-            ServiceUtils.registerServices(queryEnvironment, configurator.getServices(queryEnvironment, options));
+            ServiceUtils.registerServices(queryEnvironment,
+                    configurator.getServices(queryEnvironment, uriConverter, options));
         }
     }
 
@@ -697,7 +698,7 @@ public final class M2DocUtils {
             POIServices.getInstance().saveFile(uriConverter, destinationDocument, destination);
 
             for (IServicesConfigurator configurator : getConfigurators()) {
-                configurator.cleanServices(queryEnvironment);
+                configurator.cleanServices(queryEnvironment, uriConverter);
             }
 
             return result;

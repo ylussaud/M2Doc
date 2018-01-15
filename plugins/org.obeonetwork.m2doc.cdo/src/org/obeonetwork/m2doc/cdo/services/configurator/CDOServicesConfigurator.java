@@ -24,6 +24,7 @@ import org.eclipse.emf.cdo.session.CDOSession;
 import org.eclipse.emf.cdo.transaction.CDOTransaction;
 import org.eclipse.emf.common.util.Diagnostic;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.URIConverter;
 import org.eclipse.emf.spi.cdo.InternalCDOView;
 import org.eclipse.net4j.connector.IConnector;
 import org.obeonetwork.m2doc.cdo.M2DocCDOUtils;
@@ -31,7 +32,7 @@ import org.obeonetwork.m2doc.cdo.providers.configuration.M2DocCDOURIHandler;
 import org.obeonetwork.m2doc.services.configurator.IServicesConfigurator;
 
 /**
- * Sirius {@link IServicesConfigurator}.
+ * CDO {@link IServicesConfigurator}.
  * 
  * @author <a href="mailto:yvan.lussaud@obeo.fr">Yvan Lussaud</a>
  */
@@ -86,12 +87,13 @@ public class CDOServicesConfigurator implements IServicesConfigurator {
     }
 
     @Override
-    public Set<IService> getServices(IReadOnlyQueryEnvironment queryEnvironment, Map<String, String> options) {
+    public Set<IService> getServices(IReadOnlyQueryEnvironment queryEnvironment, URIConverter converter,
+            Map<String, String> options) {
         return Collections.emptySet();
     }
 
     @Override
-    public void cleanServices(IReadOnlyQueryEnvironment queryEnvironment) {
+    public void cleanServices(IReadOnlyQueryEnvironment queryEnvironment, URIConverter uriConverter) {
         // nothing to do here
     }
 

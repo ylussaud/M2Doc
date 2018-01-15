@@ -155,7 +155,8 @@ public class SiriusServiceConfigurator implements IServicesConfigurator {
     }
 
     @Override
-    public Set<IService> getServices(IReadOnlyQueryEnvironment queryEnvironment, Map<String, String> options) {
+    public Set<IService> getServices(IReadOnlyQueryEnvironment queryEnvironment, URIConverter uriConverter,
+            Map<String, String> options) {
         final Set<IService> res = new LinkedHashSet<>();
 
         final String sessionURIStr = options.get(M2DocSiriusUtils.SIRIUS_SESSION_OPTION);
@@ -177,7 +178,7 @@ public class SiriusServiceConfigurator implements IServicesConfigurator {
     }
 
     @Override
-    public void cleanServices(IReadOnlyQueryEnvironment queryEnvironment) {
+    public void cleanServices(IReadOnlyQueryEnvironment queryEnvironment, URIConverter uriConverter) {
         final M2DocSiriusServices serviceInstance = services.remove(queryEnvironment);
         if (serviceInstance != null) {
             serviceInstance.clean();

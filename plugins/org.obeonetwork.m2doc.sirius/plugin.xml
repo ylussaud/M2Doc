@@ -16,7 +16,7 @@
          point="org.eclipse.core.expressions.propertyTesters">
       <propertyTester
             class="org.obeonetwork.m2doc.sirius.propertyTester.TeamGenerationPropertyTester"
-            id="org.obeonetwork.m2doc.sirius.cdoPpropertyTester"
+            id="org.obeonetwork.m2doc.sirius.cdoPropertyTester"
             namespace="org.obeonetwork.m2doc.sirius.propertyTester"
             properties="testCDOGeneration"
             type="java.lang.Object">
